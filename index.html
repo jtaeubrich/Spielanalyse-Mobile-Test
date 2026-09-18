@@ -121,6 +121,18 @@
       .comparison{width:calc(100% - 18px);font-size:10px}.compare-row{grid-template-columns:minmax(45px,1fr) 76px minmax(45px,1fr);gap:3px}.compare-label{font-size:9px}
       dialog{padding:10px;border-radius:12px}.footerbuttons{gap:4px;margin-top:7px}
     }
+    .annotation-tools-toggle{display:none}
+    .video-pane.match-context .annotation-section{display:none!important}
+    .video-content-grid{grid-template-columns:minmax(0,var(--video-share,70%)) minmax(240px,1fr)}
+    @media(max-width:1050px){
+      .video-content-grid{grid-template-columns:1fr}
+      .video-events-card{width:min(100%,520px);justify-self:end}
+    }
+    @media(max-width:760px){
+      .annotation-tools-toggle{display:flex;width:100%;justify-content:space-between;align-items:center;margin-bottom:6px}
+      .annotation-section:not(.open) .annotation-toolbar{display:none}
+      .video-events-card{width:100%}
+    }
   </style>
 </head>
 <body>
@@ -156,9 +168,9 @@
         <form class="video-form" id="youtubeForm"><input class="field" id="youtubeUrl" aria-label="YouTube-Link" placeholder="YouTube-Link einfügen" type="text" required><button class="btn primary">YouTube laden</button><button class="btn" id="chooseLocalVideo" type="button">Lokales Video</button><input class="hidden" id="localVideoInput" type="file" accept="video/*"></form>
         <div class="video-frame"><div class="video-stage" id="videoStage"><div class="video-surface" id="videoSurface"><div id="youtubePlayer">YouTube- oder lokales Video laden</div></div><canvas class="annotation-canvas" id="annotationCanvas"></canvas><div class="video-comment-overlay" id="videoCommentOverlay"></div></div></div>
         <div id="videoMessage" role="status">Video und Spielzeit lassen sich getrennt starten und stoppen.</div>
-        <div class="annotation-toolbar" aria-label="Videoannotation"><button class="btn" id="drawToggle" type="button">Zeichnen</button><select class="field" id="drawTool" aria-label="Zeichenwerkzeug"><option value="pen">Freihand</option><option value="arrow">Pfeil</option><option value="circle">Kreis</option></select><input class="field" id="drawColor" type="color" value="#ffca55" aria-label="Zeichenfarbe"><button class="btn" id="undoDrawing" type="button">Zeichnung zurück</button><button class="btn danger" id="clearDrawing" type="button">Zeichnung löschen</button></div>
+        <div class="annotation-section" id="annotationSection"><button class="btn annotation-tools-toggle" id="annotationToolsToggle" type="button" aria-expanded="false"><span>Zeichenwerkzeuge</span><span aria-hidden="true">▾</span></button><div class="annotation-toolbar" aria-label="Videoannotation"><button class="btn" id="drawToggle" type="button">Zeichnen</button><select class="field" id="drawTool" aria-label="Zeichenwerkzeug"><option value="pen">Freihand</option><option value="arrow">Pfeil</option><option value="circle">Kreis</option></select><input class="field" id="drawColor" type="color" value="#ffca55" aria-label="Zeichenfarbe"><button class="btn" id="undoDrawing" type="button">Zeichnung zurück</button><button class="btn danger" id="clearDrawing" type="button">Zeichnung löschen</button></div></div>
         <div class="video-controls" aria-label="Abspielgeschwindigkeit"><button class="btn" data-rate="0.5">0,5×</button><button class="btn selected" data-rate="1">1×</button><button class="btn" data-rate="1.25">1,25×</button><button class="btn" data-rate="1.5">1,5×</button></div>
-        <label class="video-size" for="videoSize"><span>Videobreite</span><input id="videoSize" type="range" min="42" max="68" value="56"><output id="videoSizeValue">56 %</output></label>
+        <label class="video-size" for="videoSize"><span>Videobreite</span><input id="videoSize" type="range" min="55" max="78" value="70"><output id="videoSizeValue">70 %</output></label>
       </div>
     </section></div>
     <aside class="panel side">
@@ -454,9 +466,11 @@
   function loadYoutubeApi(){if(window.YT?.Player)return Promise.resolve();if(apiPromise)return apiPromise;apiPromise=new Promise((resolve,reject)=>{const timeout=setTimeout(()=>{apiPromise=null;reject(Error('YouTube lädt nicht. Internetverbindung prüfen und erneut versuchen.'));},15000);window.onYouTubeIframeAPIReady=()=>{clearTimeout(timeout);resolve()};const script=document.createElement('script');script.src='https://www.youtube.com/iframe_api';script.onerror=()=>{clearTimeout(timeout);apiPromise=null;reject(Error('YouTube konnte nicht geladen werden.'))};document.head.appendChild(script);});return apiPromise;}
   function updateRate(){if(!mediaReady())return;const actual=localVideoReady?localVideo.playbackRate:yt.getPlaybackRate();document.querySelectorAll('[data-rate]').forEach(b=>{b.classList.toggle('selected',Number(b.dataset.rate)===actual);b.setAttribute('aria-pressed',String(Number(b.dataset.rate)===actual));});state.video.playbackRate=actual;}
   document.querySelectorAll('[data-rate]').forEach(b=>b.onclick=()=>{if(!mediaReady())return toast('Zuerst ein YouTube- oder lokales Video laden.');const rate=Number(b.dataset.rate);advanceGame();if(localVideoReady)localVideo.playbackRate=rate;else{if(!yt.getAvailablePlaybackRates().includes(rate))return toast('Diese Geschwindigkeit ist für dieses Video nicht verfügbar.');yt.setPlaybackRate(rate)}updateRate();});
-  function setVideoSize(value){const size=Math.min(68,Math.max(42,Number(value)||56));document.documentElement.style.setProperty('--video-share',size+'%');$("videoSize").value=String(size);$("videoSizeValue").value=size+' %';try{localStorage.setItem('handballMobileTest.videoSize',String(size))}catch{}}
+  function setVideoSize(value){const size=Math.min(78,Math.max(55,Number(value)||70));document.documentElement.style.setProperty('--video-share',size+'%');$("videoSize").value=String(size);$("videoSizeValue").value=size+' %';try{localStorage.setItem('handballMobileTest.videoSizeV2',String(size))}catch{}}
   $("videoSize").oninput=e=>setVideoSize(e.target.value);
-  let savedVideoSize=56;try{savedVideoSize=localStorage.getItem('handballMobileTest.videoSize')||56}catch{}setVideoSize(savedVideoSize);
+  let savedVideoSize=70;try{savedVideoSize=localStorage.getItem('handballMobileTest.videoSizeV2')||70}catch{}setVideoSize(savedVideoSize);
+  function setAnnotationToolsOpen(open){const section=$("annotationSection"),toggle=$("annotationToolsToggle");section.classList.toggle("open",open);toggle.setAttribute("aria-expanded",String(open));toggle.lastElementChild.textContent=open?"▴":"▾";if(!open){drawingEnabled=false;drawingDraft=null;$("annotationCanvas").classList.remove("drawing");$("drawToggle").classList.remove("selected");$("drawToggle").textContent="Zeichnen";renderAnnotation()}}
+  $("annotationToolsToggle").onclick=()=>setAnnotationToolsOpen(!$("annotationSection").classList.contains("open"));
   function updateClipExportAvailability(){const disabled=!localVideoReady||exportBusy;for(const id of ["exportSelectedEvents","exportAllEvents","generatePresetClips"]){const button=$(id);if(button)button.disabled=disabled}if(!localVideoReady&&!exportBusy){$("exportStatus").textContent=ytReady?"YouTube-Video geladen. Für den Clip-Export bitte ein lokales Video laden.":"Für den Clip-Export bitte ein lokales Video laden."}}
   function clearLocalVideo(){if(localVideo)localVideo.pause();localVideo=null;localVideoReady=false;if(localVideoUrl)URL.revokeObjectURL(localVideoUrl);localVideoUrl=null;exportAudioSource=null;exportAudioDestination=null;if(exportAudioContext){exportAudioContext.close().catch(()=>{});exportAudioContext=null}updateClipExportAvailability()}
   function clearYoutube(){if(yt)try{yt.destroy()}catch{}yt=null;ytReady=false;ytId=null}
